@@ -1,8 +1,8 @@
 # simple-router
 
-###Simple PHP Routing Library
+## Simple PHP Routing Library
 
-###example
+### example
 
 ```php
 use SimpleRouter\Router;
@@ -15,8 +15,7 @@ class ExampleHandler implements IRequestHandler {
 }
  
 $router = Router::getInstance();
-$router->get("/articles/{category?}/{id : integer}/{format? = html}", new ExampleHandler);
+$router->get("/articles/{category?}/{id : integer}/{format? = html}", new ExampleHandler());
  
 $router->handle();
 ```
-
