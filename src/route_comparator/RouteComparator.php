@@ -276,12 +276,13 @@ class RouteComparator {
     }
 
 
-    private function someOptionalCompare($parsedPath, $template) {
-        $templateParts = $template->parts;
+    private function someOptionalCompare($parsedPath, Template $template) {
+        $templateParts = $template->getParts();
         $params = array();
-        $handler = $template->handler;
+        $handler = $template->getHandler();
+        $plugins = $template->getPlugins();
 
-        $requiredIndexes = $template->requiredIndexes;
+        $requiredIndexes = $template->getRequiredIndexes();
 
         $lastFoundRequiredIndex = -1;
         $lastTemplateRequiredIndex = -1;
@@ -327,6 +328,7 @@ class RouteComparator {
         $res = new RouteComparationResult();
         return $res->setHandler($handler)
             ->setParams($params)
+            ->setPlugins($plugins)
             ->setLengthDelta(count($templateParts) - count($parsedPath));
     }
 

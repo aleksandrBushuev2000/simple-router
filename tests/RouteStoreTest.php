@@ -18,6 +18,7 @@ use SimpleRouter\template_parser\exceptions\ParseException;
 class RouteStoreTest extends TestCase {
 
     private $routes = [
+        "/news/{format? = json}",
         "/articles/{page? = 1}/",
         "/",
         "/about/",
@@ -29,6 +30,8 @@ class RouteStoreTest extends TestCase {
     public function hasMatchRouteProvider() {
         $routes = $this->routes;
         return array(
+            array($routes, "/news/"),
+            array($routes, "/news"),
             array($routes, "/articles/100"),
             array($routes, "/geo/17.43/42.43"),
             array($routes, "/"),

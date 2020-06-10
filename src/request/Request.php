@@ -9,14 +9,14 @@ namespace SimpleRouter\request;
  * @description Request instance
 */
 class Request {
-    private string $method;
-    private array $headers;
-    private string $path;
-    private array $query;
-    private array $params;
-    private array $cookie;
+    private string $method = "GET";
+    private array $headers = [];
+    private string $path = "/";
+    private array $query = [];
+    private array $params = [];
+    private array $cookie = [];
 
-    private array $vars;
+    private array $vars = [];
 
     private function getHeaders() : array {
         $headers = array();

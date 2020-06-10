@@ -54,6 +54,10 @@ class Template {
         return $this->plugins;
     }
 
+    public function getRequiredIndexes() {
+        return $this->requiredIndexes;
+    }
+
     public function __get($key) {
         if (isset($this->$key)) {
             return $this->$key;
