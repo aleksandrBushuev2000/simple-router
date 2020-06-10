@@ -96,6 +96,9 @@ class RouteComparator {
 
 
     private function noOptionalCompare($parsedPath, Template $template) {
+        /**
+         * @var TemplatePart[] $templateParts
+        */
         $templateParts = $template->getParts();
         $params = array();
         $handler = $template->getHandler();
@@ -112,6 +115,10 @@ class RouteComparator {
             );
             if ($comparationObject === null) {
                 return null;
+            }
+
+            if ($comparationObject->getIsAlias() === true) {
+                $params[$comparationObject->getKey()] = $comparationObject->getValue();
             }
         }
 
@@ -138,11 +145,11 @@ class RouteComparator {
 
     private function findMatchTemplate($value, $templates, $delta, $index, $usedTemplates) {
         $foundTemplate = null;
-        for ($i = $index; $i < $index + $delta; $i++) {
+        for ($i = $index; $i < $index + $delta + 1; $i++) {
             if (!isset($usedTemplates[$i])) {
-                $comparationObject = $this->compareBucketAndTemplateParts($value, $templates[$index]);
+                $comparationObject = $this->compareBucketAndTemplateParts($value, $templates[$i]);
                 if ($comparationObject !== null) {
-                    return new class($comparationObject, $index) {
+                    return new class($comparationObject, $i) {
                         public RoutePartComparationResult $comparationObject;
                         public int $index;
     
@@ -205,6 +212,7 @@ class RouteComparator {
                     $props[$comparationObject->getKey()] = $comparationObject->getValue();
                 }
             }
+
             for ($i = 0; $i < count($templates); $i++) {
                 if (!isset($usedTemplates[$i])) {
                     if ($templates[$i]->getInitValue() !== null) {
@@ -230,7 +238,7 @@ class RouteComparator {
      */
     private function findRequiredPart(
         $parsedPath, 
-        $templatePart, 
+        $templatePart,
         $maxIndex, 
         $lastFoundRequiredIndex,
         $allTemplates, 
