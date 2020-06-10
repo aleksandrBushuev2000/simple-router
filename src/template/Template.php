@@ -26,6 +26,7 @@ class Template {
     public function __construct(IRequestHandler $handler, array $plugins) {
         $this->handler = $handler;
         $this->length = 0;
+        $this->optionalLength = 0;
         $this->plugins = $plugins;
         $this->parts = array();
     }
