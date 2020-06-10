@@ -3,6 +3,7 @@
 namespace SimpleRouter\route_comparator;
 
 use SimpleRouter\template\Template;
+use SimpleRouter\template\TemplatePart;
 
 /**
  * @class RouteComparator
@@ -52,18 +53,18 @@ class RouteComparator {
         return $str;
     }
 
-    private function compareBucketAndTemplateParts($bucketPart, $templatePart) {
+    private function compareBucketAndTemplateParts($bucketPart, TemplatePart $templatePart) {
         $result = new RoutePartComparationResult();
-        if ($templatePart->isAlias === true) {
-            if ($this->isDatatype($bucketPart, $templatePart->dataType)) {
-                $value = $this->getValueByDatatype($bucketPart, $templatePart->dataType);
+        if ($templatePart->getIsAlias() === true) {
+            if ($this->isDatatype($bucketPart, $templatePart->getDatatype())) {
+                $value = $this->getValueByDatatype($bucketPart, $templatePart->getDatatype());
                 return $result->setIsAlias(true)
-                    ->setKey($templatePart->name)
+                    ->setKey($templatePart->getName())
                     ->setValue($value)
                     ->setIsEqual(true);
             }
-        } else if ($templatePart->name == $bucketPart) {
-            return $result->setKey($templatePart->name)
+        } else if ($templatePart->getName() == $bucketPart) {
+            return $result->setKey($templatePart->getName())
                 ->setIsAlias(false)
                 ->setIsEqual(true);
         }
@@ -115,12 +116,15 @@ class RouteComparator {
 
         for ($i = 0; $i < count($optionalIndexes); $i++) {
             $index = $optionalIndexes[$i];
+            /**
+             * @var TemplatePart $part
+            */
             $part = $templateParts[$index];
 
-            if ($part->initialValue) {
-                $params[$part->name] = $part->initialValue;
+            if ($part->getInitValue()) {
+                $params[$part->getName()] = $part->getInitValue();
             } else {
-                $params[$part->name] = $this->DEFAULT_VALUES[$part->dataType];
+                $params[$part->getName()] = $this->DEFAULT_VALUES[$part->getDatatype()];
             }
         }
 
@@ -159,6 +163,11 @@ class RouteComparator {
         return null;
     }
 
+    /**
+     * @param string[] $values
+     * @param TemplatePart[] $templates
+     * @return array|null
+    */
     private function compareOptionalValuesWithTemplates($values, $templates) {
         $params = array();
         if (count($values) > count($templates)) {
@@ -196,10 +205,10 @@ class RouteComparator {
             }
             for ($i = 0; $i < count($templates); $i++) {
                 if (!isset($usedTemplates[$i])) {
-                    if ($templates[$i]->initialValue !== null) {
-                        $props[$templates[$i]->name] = $templates[$i]->initialValue;
+                    if ($templates[$i]->getInitValue() !== null) {
+                        $props[$templates[$i]->getName()] = $templates[$i]->getInitValue();
                     } else {
-                        $props[$templates[$i]->name] = $this->DEFAULT_VALUES[$templates[$i]->dataType];
+                        $props[$templates[$i]->getName()] = $this->DEFAULT_VALUES[$templates[$i]->getDatatype()];
                     }
                 }
             }
@@ -208,11 +217,20 @@ class RouteComparator {
         return null;
     }
 
+    /**
+     * @param string[] $parsedPath
+     * @param TemplatePart $templatePart
+     * @param int $maxIndex
+     * @param int $lastFoundRequiredIndex
+     * @param TemplatePart[] $allTemplates
+     * @param int $lastRequiredIndex
+     * @return RoutePartComparationResult|null
+     */
     private function findRequiredPart(
         $parsedPath, 
         $templatePart, 
         $maxIndex, 
-        $lastFoundRequiredIndex, 
+        $lastFoundRequiredIndex,
         $allTemplates, 
         $lastRequiredIndex
     ) {
@@ -233,9 +251,10 @@ class RouteComparator {
                 }
 
                 $optionalTemplates = array();
-              
+
+
                 for ($j = $lastRequiredIndex + 1; $j < $maxIndex; $j++) {
-                    if ($allTemplates[$j]->isOptional === true) {
+                    if ($allTemplates[$j]->getIsOptional() === true) {
                         array_push($optionalTemplates, $allTemplates[$j]);
                     } else {
                         return null;

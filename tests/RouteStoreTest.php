@@ -60,7 +60,9 @@ class RouteStoreTest extends TestCase {
             $parser = new DefaultTemplateParser();
 
             foreach ($routes as $key => $value) {
-                $parsedTemplate = $parser->parseTemplate($value, null, []);
+                $parsedTemplate = $parser->parseTemplate($value, new class implements \SimpleRouter\handlers\IRequestHandler {
+                    public function handle(\SimpleRouter\request\Request $req){}
+                }, []);
                 $store->push("GET", $parsedTemplate);
             }
 
@@ -82,12 +84,14 @@ class RouteStoreTest extends TestCase {
             $parser = new DefaultTemplateParser();
 
             foreach ($routes as $key => $value) {
-                $parsedTemplate = $parser->parseTemplate($value, null, []);
+                $parsedTemplate = $parser->parseTemplate($value, new class implements \SimpleRouter\handlers\IRequestHandler {
+                    public function handle(\SimpleRouter\request\Request $req){}
+                }, []);
                 $store->push("GET", $parsedTemplate);
             }
 
-            $result =$store->match($needle, "GET");
-            assertEquals(null, $result);
+            $result = $store->match($needle, "GET");
+            $this->assertEquals(null, $result);
         } catch (ParseException $e) {
             $this->fail();
         }
