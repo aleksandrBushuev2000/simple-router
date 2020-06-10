@@ -2,30 +2,31 @@
 
 namespace SimpleRouter\template_parser;
 
+use SimpleRouter\template\exceptions\TemplatePartException;
 use SimpleRouter\template\TemplatePart;
 use SimpleRouter\template_parser\exceptions\ParseException;
 
 /**
  * @class DefaultAliasParser
- * @version 1.0.0
+ * @version 2.0.0
  * @author Aleksandr Bushuev
  */
 class DefaultAliasParser {
 
-    private $DATA_TYPES = [
+    private array $DATA_TYPES = [
         "integer" => true,
         "double" => true,
         "boolean" => true,
         "string" => true,
     ];
 
-    private $IGNORE_LIST = [
+    private array $IGNORE_LIST = [
         " " => true,
         "\r" => true,
         "\n" => true,
     ];
 
-    private $ERROR_STOP_LIST = [
+    private array $ERROR_STOP_LIST = [
         "datatype" => [
             "{" => true,
             ":" => true,
@@ -41,7 +42,7 @@ class DefaultAliasParser {
         ]
     ];
 
-    private $STOP_LIST = [
+    private array $STOP_LIST = [
         "datatype" => [
             "=" => true,
             "}" => true,
@@ -63,7 +64,7 @@ class DefaultAliasParser {
      * @param int $from
      * @return string
      */
-    private function getSubstringUntilFirstStopSymbol($alias, $type, $from = 0) {
+    private function getSubstringUntilFirstStopSymbol(string $alias, string $type, $from = 0) : string {
         $stopSymbols = $this->STOP_LIST[$type];
         $errorStopSymbols = $this->ERROR_STOP_LIST[$type];
 
@@ -96,31 +97,23 @@ class DefaultAliasParser {
      * @param string $alias
      * @param string $type
      * @param string $sectionSeparator
-     * @return string | null
+     * @return DefaultAliasParserSectionTransporter|null
      */
-    private function getSection($alias, $type, $sectionSeparator) {
+    private function getSection($alias, $type, $sectionSeparator) : ?DefaultAliasParserSectionTransporter {
         $symbolPosition = strpos($alias, $sectionSeparator);
         if ($symbolPosition !== false) {
             $section = $this->getSubstringUntilFirstStopSymbol($alias, $type, $symbolPosition + 1);
-            return new class($section, $symbolPosition) {
-                public $section;
-                public $position;
-
-                public function __construct($section, $position) {
-                    $this->section = $section;
-                    $this->position = $position;
-                }
-            };
+            return new DefaultAliasParserSectionTransporter($section, $symbolPosition);
         }
         return null;
     }
 
     /**
      * @throws ParseException
-     * @param {section : string, position : string} $nameObject
+     * @param DefaultAliasParserSectionTransporter|null $datatypeObject
      * @return string
      */
-    private function getDatatype($datatypeObject) {
+    private function getDatatype(?DefaultAliasParserSectionTransporter $datatypeObject) : string {
         if (is_null($datatypeObject) || strlen($datatypeObject->section) == 0) {
             return "string";
         } else {
@@ -136,10 +129,10 @@ class DefaultAliasParser {
     }
 
     /**
-     * @param {section : string, position : string} $nameObject
-     * @return string
+     * @param DefaultAliasParserSectionTransporter|null $defaultValueObject
+     * @return string|null
      */
-    private function getDefaultValue($defaultValueObject) {
+    private function getDefaultValue(?DefaultAliasParserSectionTransporter $defaultValueObject) : ?string {
         if (is_null($defaultValueObject)) {
             return null;
         } else {
@@ -149,10 +142,10 @@ class DefaultAliasParser {
 
     /**
      * @throws ParseException
-     * @param {section : string, position : string} $nameObject
+     * @param DefaultAliasParserSectionTransporter|null $nameObject
      * @return string
      */
-    private function getName($nameObject) {
+    private function getName(?DefaultAliasParserSectionTransporter $nameObject) : string {
         if (is_null($nameObject) || strlen($nameObject->section) == 0) {
             throw new ParseException("Invalid name section");
         } else {
@@ -161,17 +154,22 @@ class DefaultAliasParser {
     }
 
     /**
-     * @param string $value
+     * @param string|null $value
      * @param string $datatype
-     * @return string
+     * @return int|string|bool|float
      */
-    private function resolveDefaultValue($value, $datatype) {
+    private function resolveDefaultValue(?string $value, string $datatype) {
         $datatype = strtolower($datatype);
         if (!is_null($value) && $datatype != "string") {
             switch($datatype) {
                 case "integer" : return intval($value);
                 case "double" : return doubleval($value);
                 case "boolean" : return boolval($value);
+                default : return $value;
+            }
+        } else {
+            if (is_null($value)) {
+                return "";
             }
         }
         return $value;
@@ -179,10 +177,11 @@ class DefaultAliasParser {
 
     /**
      * @throws ParseException
-     * @param string @alias
+     * @throws TemplatePartException
+     * @param string $alias
      * @return TemplatePart
-    */
-    public function parse($alias) {
+     */
+    public function parse($alias) : TemplatePart {
         $datatype = $this->getDatatype($this->getSection($alias, "datatype", ":"));
         $defaultValue = $this->getDefaultValue($this->getSection($alias, "default_value", "="));
         $name = $this->getName($this->getSection($alias, "name", "{"));
@@ -191,6 +190,10 @@ class DefaultAliasParser {
         $defaultValue = $this->resolveDefaultValue($defaultValue, $datatype);
 
         $res = new TemplatePart();
-        return $res->name($name)->isAlias(true)->isOptional($isOptional)->dataType($datatype)->initialValue($defaultValue);
+        return $res->setName($name)
+            ->setIsAlias(true)
+            ->setIsOptional($isOptional)
+            ->setDataType($datatype)
+            ->setInitValue($defaultValue);
     }
 }

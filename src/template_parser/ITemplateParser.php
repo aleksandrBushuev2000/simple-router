@@ -3,6 +3,7 @@
 namespace SimpleRouter\template_parser;
 
 use SimpleRouter\handlers\IRequestHandler;
+use SimpleRouter\plugins\IRouterPlugin;
 use SimpleRouter\template\Template;
 
 /**
@@ -16,7 +17,8 @@ interface ITemplateParser {
      * Parse template
      * @param string $path - request path (template, f.e. /members/{memberId}/{sectionName}/)
      * @param IRequestHandler $handler - request handler with "handle" method
+     * @param array<IRouterPlugin> $plugins
      * @return Template
      */
-    public function parseTemplate(string $path, IRequestHandler $handler);
+    public function parseTemplate(string $path, IRequestHandler $handler, array $plugins);
 }

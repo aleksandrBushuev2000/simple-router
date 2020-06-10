@@ -2,28 +2,30 @@
 
 namespace SimpleRouter;
 
-use SimpleRouter\exceptions\BadRequestException;
-use SimpleRouter\exceptions\NotFoundException;
-use SimpleRouter\exceptions\UndefinedHttpMethodException;
-
-use SimpleRouter\handlers\default_handlers\BadRequestHandler;
-use SimpleRouter\handlers\default_handlers\NotFoundHandler;
-use SimpleRouter\handlers\default_handlers\InternalServeErrorHandler;
+use SimpleRouter\exceptions\RouteException;
+use SimpleRouter\handlers\error_handler\AbstractRouteErrorHandler;
+use SimpleRouter\handlers\error_handler\RouteExceptionHandler;
 
 use SimpleRouter\handlers\IRequestHandler;
-use SimpleRouter\request_parser\DefaultRequestParser;
+use SimpleRouter\plugins\IRouterPlugin;
+use SimpleRouter\request\Request;
+use SimpleRouter\route_store\IRouteStore;
 use SimpleRouter\template_parser\DefaultTemplateParser;
 
 use SimpleRouter\route_store\DefaultRouteStore;
 use SimpleRouter\template_parser\exceptions\ParseException;
 
+use SimpleRouter\template_parser\ITemplateParser;
+use Throwable;
+
 /**
  * @class Router
- * @version 1.0.0
+ * @version 2.0.0
  * @author Aleksandr Bushuev
+ * @license MIT
  * @description Main part of this library.
  * Router supports all http methods with primitive data types, optional route parts and default values.
- * You can override default error (404, 500) handlers.
+ * You can override default error handler
  * Router is a Singleton, so, you MUST call static method Router::getInstance() to have ability to use router.
  * After definition of all paths you MUST call handle() method;
  *
@@ -39,125 +41,137 @@ use SimpleRouter\template_parser\exceptions\ParseException;
  *
  * $router = Router::getInstance();
  *
- * $router->get("/articles/{category?}/{id : integer}/{format? = html}", new ExampleHandler);
+ * $router->get("/articles/{category?}/{id : integer}/{format? = html}", new ExampleHandler());
  *
  * $router->handle();
 */
 class Router {
 
-    private $templateParser;
-    private $requestParser;
-    private $store;
+    private ITemplateParser $templateParser;
+    private IRouteStore $store;
 
-    private static $Router = null;
+    private static Router $Router;
 
-    private $handlers = [
-        "404" => null,
-        "500" => null,
-        "400" => null,
-    ];
-
-    private $AVAIBLE_HTTP_METHODS = [
-        "GET" => true,
-        "HEAD" => true,
-        "POST" => true,
-        "PUT" => true,
-        "DELETE" => true,
-        "PATCH" => true,
-        "TRACE" => true,
-        "CONNECT" => true,
-        "OPTIONS" => true,
-    ];
+    private AbstractRouteErrorHandler $errorHandler;
 
     private function __construct() {
+        $this->errorHandler = new RouteExceptionHandler();
         $this->templateParser = new DefaultTemplateParser();
-        $this->requestParser = new DefaultRequestParser();
         $this->store = new DefaultRouteStore();
     }
 
     /**
-     * @description Sets 404 Error handler (if route template not found)
-     * @param IRequestHandler $handler
+     * @description Sets Error handler
+     * @param AbstractRouteErrorHandler $handler
      */
-    public function set404Handler(IRequestHandler $handler) {
-        $this->handlers["404"] = $handler;
-    }
-
-    /**
-     * @description Sets 500 Error handler (Internal Serve Error)
-     * @param IRequestHandler $handler
-     */
-    public function set500Handler(IRequestHandler $handler) {
-        $this->handlers["500"] = $handler;
-    }
-
-    /**
-     * @description Sets 400 Error handler (Bad Request)
-     * @param IRequestHandler $handler
-     */
-    public function set400Handler(IRequestHandler $handler) {
-        $this->handlers["400"] = $handler;
+    public function setErrorHandler(AbstractRouteErrorHandler $handler) {
+        $this->errorHandler = $handler;
     }
 
     /**
      * @description Returns an instance of router
      * @return Router
      */
-    public static function getInstance() {
-        if (self::$Router == null) {
+    public static function getInstance() : Router {
+        if (!isset(self::$Router)) {
             self::$Router = new self();
         }
         return self::$Router;
     }
 
     /**
-     * @throws UndefinedHttpMethodException
      * @throws ParseException
-     * @param string $method - valid http method name
-     * @param $arg - route path and route handler
+     * @param string $path sth like this: "/articles/{category?}/{id : integer}/{format? = html}"
+     * @param IRequestHandler $handler
+     * @param array<IRouterPlugin> $plugins
      */
-    public function __call($method, $arg) {
-        $httpRequestMethod = strtoupper($method);
-        if (isset($this->AVAIBLE_HTTP_METHODS[$httpRequestMethod])) {
-            $path = $arg[0];
-            $handler = $arg[1];
-            $this->request($httpRequestMethod, $path, $handler);
-        } else {
-            throw new UndefinedHttpMethodException("Undefined http method: ".$httpRequestMethod);
-        }
+    public function get(string $path, IRequestHandler $handler, array $plugins = []) {
+        $this->request("GET", $path, $handler, $plugins);
+    }
+
+    /**
+     * @throws ParseException
+     * @param string $path sth like this: "/articles/{category?}/{id : integer}/{format? = html}"
+     * @param IRequestHandler $handler
+     * @param array<IRouterPlugin> $plugins
+     */
+    public function post(string $path, IRequestHandler $handler, array $plugins = []) {
+        $this->request("POST", $path, $handler, $plugins);
+    }
+
+    /**
+     * @throws ParseException
+     * @param string $path sth like this: "/articles/{category?}/{id : integer}/{format? = html}"
+     * @param IRequestHandler $handler
+     * @param array<IRouterPlugin> $plugins
+     */
+    public function put(string $path, IRequestHandler $handler, array $plugins = []) {
+        $this->request("PUT", $path, $handler, $plugins);
+    }
+
+    /**
+     * @throws ParseException
+     * @param string $path sth like this: "/articles/{category?}/{id : integer}/{format? = html}"
+     * @param IRequestHandler $handler
+     * @param array<IRouterPlugin> $plugins
+     */
+    public function delete(string $path, IRequestHandler $handler, array $plugins = []) {
+        $this->request("DELETE", $path, $handler, $plugins);
+    }
+
+    /**
+     * @throws ParseException
+     * @param string $path sth like this: "/articles/{category?}/{id : integer}/{format? = html}"
+     * @param IRequestHandler $handler
+     * @param array<IRouterPlugin> $plugins
+     */
+    public function patch(string $path, IRequestHandler $handler, array $plugins = []) {
+        $this->request("PATCH", $path, $handler, $plugins);
     }
 
     /**
      * @throws ParseException
      * @param string $method (GET | POST | PUT | DELETE | etc...)
      * @param string $path sth like this: "/articles/{category?}/{id : integer}/{format? = html}"
-     * @param IRequestHandler @handler
+     * @param IRequestHandler $handler
+     * @param array<IRouterPlugin> $plugins
      */
-    public function request($method, $path, $handler) {
-        $template = $this->templateParser->parseTemplate($path, $handler);
+    public function request($method, $path, $handler, array $plugins = []) {
+        $template = $this->templateParser->parseTemplate($path, $handler, $plugins);
         $this->store->push($method, $template);
     }
 
-    /**
-     * @throws BadRequestException
-     */
-    private function parseRequest() {
-        try {
-            return $this->requestParser->parse();
-        } catch(\Exception $e) {
-            throw new BadRequestException("Bad request");
-        } 
+    private function handleException(Request $req, Throwable $e) {
+        if ($e instanceof RouteException) {
+            $this->errorHandler->setError($e);
+            $this->errorHandler->handle($req);
+        } else {
+            $error = new RouteException("Internal Serve Error", 500);
+            $this->errorHandler->setError($error);
+            $this->errorHandler->handle($req);
+        }
     }
 
-    private function requireErrorHandlers() {
-        if (!isset($this->handlers["400"])) {
-            $this->handlers["400"] = new BadRequestHandler();
+    private function executePlugins(array $plugins, Request $req) : bool {
+        try {
+            foreach ($plugins as $index => $plugin) {
+                /**
+                 * @var IRouterPlugin $plugin
+                 */
+                $plugin->execute($req);
+            }
+            return true;
+        } catch (Throwable $e) {
+            $this->handleException($req, $e);
+            return false;
         }
-        if (!isset($this->handlers["500"])) {
-            $this->handlers["500"] = new InternalServeErrorHandler();
-        }
-        if (!isset($this->handlers["404"])) {
-            $this->handlers["404"] = new NotFoundHandler();
+    }
+
+    private function handleRequest(IRequestHandler $handler, Request $req) {
+        try {
+            $handler->handle($req);
+        } catch (Throwable $e) {
+            $this->handleException($req, $e);
         }
     }
 
@@ -166,19 +180,22 @@ class Router {
     */
     public function handle() {
         try {
-            $this->requireErrorHandlers();
             $path = $_SERVER['REQUEST_URI'];
             $method = $_SERVER['REQUEST_METHOD'];
-            $req = $this->parseRequest();
-            $handlerAndParams = $this->store->match($path, $method);
-            $req->params = $handlerAndParams->params;
-            $handlerAndParams->handler->handle($req);
-        } catch(BadRequestException $e) {
-            $this->handlers["400"]->handle(null);
-        } catch(NotFoundException $e) {
-            $this->handlers["404"]->handle(null);
-        } catch(\Throwable $e) {
-            $this->handlers["500"]->handle(null);
+            $comparationResult = $this->store->match($path, $method);
+            if ($comparationResult === null) {
+                throw new RouteException("Cannot ".$method." ".$path, 404);
+            } else {
+                $req = Request::create($comparationResult->getParams());
+                $plugins = $comparationResult->getPlugins();
+
+                if ($this->executePlugins($plugins, $req)) {
+                    $handler = $comparationResult->getHandler();
+                    $this->handleRequest($handler, $req);
+                }
+            }
+        } catch (Throwable $e) {
+            $this->handleException(Request::create([]), $e);
         }
     }
 }

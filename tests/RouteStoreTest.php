@@ -7,9 +7,11 @@ use SimpleRouter\exceptions\NotFoundException;
 use SimpleRouter\route_store\DefaultRouteStore;
 use SimpleRouter\template_parser\DefaultTemplateParser;
 
+use SimpleRouter\template_parser\exceptions\ParseException;
+
 /**
  * @class RouteStoreTest
- * @version 1.0.0
+ * @version 2.0.0
  * @author AleksandrBushuev
  * @description Test case for SimpleRouter/route_store/DefaultRouteStore
  */
@@ -40,6 +42,7 @@ class RouteStoreTest extends TestCase {
         return array(
             array($routes, "/articles/namespace/144/4245/32/100"),
             array($routes, "/geo/17.43/42.43/43/23"),
+            array($routes, "/geo/up/13.42"),
             array($routes, "/contacts"),
             array($routes, "/about/contacts"),
             array($routes, "/articles/cars/cars-11/json/"),
@@ -57,7 +60,7 @@ class RouteStoreTest extends TestCase {
             $parser = new DefaultTemplateParser();
 
             foreach ($routes as $key => $value) {
-                $parsedTemplate = $parser->parseTemplate($value, null);
+                $parsedTemplate = $parser->parseTemplate($value, null, []);
                 $store->push("GET", $parsedTemplate);
             }
 
@@ -73,24 +76,21 @@ class RouteStoreTest extends TestCase {
      * @param array<string> $routes : Array of routes
      * @param string $needle : Route to search
      */
-    public function testThrowNotFoundErrorIfNoneMatch($routes, $needle) {
+    public function testReturnNullNoneMatch($routes, $needle) {
         try {
             $store = new DefaultRouteStore();
             $parser = new DefaultTemplateParser();
 
             foreach ($routes as $key => $value) {
-                $parsedTemplate = $parser->parseTemplate($value, null);
+                $parsedTemplate = $parser->parseTemplate($value, null, []);
                 $store->push("GET", $parsedTemplate);
             }
 
-            $store->match($needle, "GET");
-            $this->fail("Unexpected Exception");
-        } catch (Exception $e) {
-          if (!($e instanceof NotFoundException)) {
-              $this->fail("Unexpected Exception Type");
-          } else {
-              $this->assertNotNull($e);
-          }
+            $result =$store->match($needle, "GET");
+            assertEquals(null, $result);
+        } catch (ParseException $e) {
+            $this->fail();
         }
+
     }
 }

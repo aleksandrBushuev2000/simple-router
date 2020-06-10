@@ -2,9 +2,11 @@
 
 namespace SimpleRouter\route_comparator;
 
+use SimpleRouter\template\Template;
+
 /**
  * @class RouteComparator
- * @version 1.0.0
+ * @version 1.2.0
  * @author AleksandrBushuev
  * @description Provides ability to compare Route template with real path
  *
@@ -55,16 +57,21 @@ class RouteComparator {
         if ($templatePart->isAlias === true) {
             if ($this->isDatatype($bucketPart, $templatePart->dataType)) {
                 $value = $this->getValueByDatatype($bucketPart, $templatePart->dataType);
-                return $result->isAlias(true)->key($templatePart->name)->value($value)->equal(true);
+                return $result->setIsAlias(true)
+                    ->setKey($templatePart->name)
+                    ->setValue($value)
+                    ->setIsEqual(true);
             }
         } else if ($templatePart->name == $bucketPart) {
-            return $result->key($templatePart->name)->isAlias(false)->equal(true);
+            return $result->setKey($templatePart->name)
+                ->setIsAlias(false)
+                ->setIsEqual(true);
         }
         return null;
     }
 
-    private function strictCompare($parsedPath, $template) {
-        $templateParts = $template->parts;
+    private function strictCompare(array $parsedPath, Template $template) {
+        $templateParts = $template->getParts();
         $params = array();
         for ($i = 0; $i < count($templateParts); $i++) {
             $comparationObject = $this->compareBucketAndTemplateParts(
@@ -74,15 +81,16 @@ class RouteComparator {
             if ($comparationObject === null) {
                 return null;
             } else {
-                if ($comparationObject->isAlias === true) {
-                    $params[$comparationObject->key] = $comparationObject->value;
+                if ($comparationObject->getIsAlias() === true) {
+                    $params[$comparationObject->getKey()] = $comparationObject->getValue();
                 }
             }
         }
         $res = new RouteComparationResult();
-        return $res->lengthDelta(0)
-                    ->params($params)
-                    ->handler($template->handler);
+        return $res->setLengthDelta(0)
+            ->setParams($params)
+            ->setHandler($template->getHandler())
+            ->setPlugins($template->getPlugins());
     }
 
 
@@ -96,7 +104,6 @@ class RouteComparator {
 
         for ($i = 0; $i < count($requiredIndexes); $i++) {
             $index = $requiredIndexes[$i];
-            $part = $templateParts[$index];
             $comparationObject = $this->compareBucketAndTemplateParts(
                 $parsedPath[$i],
                 $templateParts[$index]
@@ -118,9 +125,9 @@ class RouteComparator {
         }
 
         $res = new RouteComparationResult();
-        return $res->lengthDelta(count($templateParts) - count($parsedPath))
-            ->params($params)
-            ->handler($handler);
+        return $res->setLengthDelta(count($templateParts) - count($parsedPath))
+            ->setParams($params)
+            ->setHandler($handler);
     }
 
     private function findMatchTemplate($value, $templates, $delta, $index, $usedTemplates) {
@@ -128,14 +135,22 @@ class RouteComparator {
         for ($i = $index; $i < $index + $delta; $i++) {
             if (!isset($usedTemplates[$i])) {
                 $comparationObject = $this->compareBucketAndTemplateParts($value, $templates[$index]);
-                if ($comparationObject != null) {
+                if ($comparationObject !== null) {
                     return new class($comparationObject, $index) {
-                        public $comparationObject;
-                        public $index;
+                        public RoutePartComparationResult $comparationObject;
+                        public int $index;
     
-                        public function __construct($comparationObject, $index) {
+                        public function __construct(RoutePartComparationResult $comparationObject, int $index) {
                             $this->comparationObject = $comparationObject;
                             $this->index = $index;
+                        }
+
+                        public function getIndex() : int {
+                            return $this->index;
+                        }
+
+                        public function getComparationObject() : RoutePartComparationResult {
+                            return $this->comparationObject;
                         }
                     };
                 }
@@ -157,7 +172,7 @@ class RouteComparator {
                 if ($comparationObject == null) {
                     return null;
                 } else {
-                    $params[$comparationObject->key] = $comparationObject->value;
+                    $params[$comparationObject->getKey()] = $comparationObject->getValue();
                 }
                 return $params;
             }
@@ -168,11 +183,15 @@ class RouteComparator {
             for ($i = 0; $i < count($values); $i++) {
                 $value = $values[$i];
                 $result = $this->findMatchTemplate($value, $templates, $delta, $i, $usedTemplates);
-                if ($result == null) {
+                if ($result === null) {
                     return null;
                 } else {
-                    $usedTemplates[$result->index] = true;
-                    $props[$result->comparationObject->key] = $result->comparationObject->value;
+                    /**
+                     * @var RoutePartComparationResult $comparationObject
+                    */
+                    $comparationObject = $result->getComparationObject();
+                    $usedTemplates[$result->getIndex()] = true;
+                    $props[$comparationObject->getKey()] = $comparationObject->getValue();
                 }
             }
             for ($i = 0; $i < count($templates); $i++) {
@@ -186,6 +205,7 @@ class RouteComparator {
             }
             return $props;
         }
+        return null;
     }
 
     private function findRequiredPart(
@@ -203,10 +223,9 @@ class RouteComparator {
             $usedMaxIndex = count($parsedPath) - 1;
         }
         for ($i = $usedMaxIndex; $i > $lastFoundRequiredIndex; $i--) {
-            $parsedPathPart = $parsedPath[$i];
             $comparationObject = $this->compareBucketAndTemplateParts($parsedPath[$i], $templatePart);
             if ($comparationObject !== null) {
-                $comparationObject->foundAt($i);
+                $comparationObject->setFoundAt($i);
 
                 $optionalValues = array();
                 for ($j = $lastFoundRequiredIndex + 1; $j < $i; $j++) {
@@ -227,7 +246,7 @@ class RouteComparator {
                 if ($optionalParams === null) {
                     return null;
                 } else {
-                    $comparationObject->optionalParams = $optionalParams;
+                    $comparationObject->setOptionalParams($optionalParams);
                 }
 
                 return $comparationObject;
@@ -245,14 +264,8 @@ class RouteComparator {
 
         $requiredIndexes = $template->requiredIndexes;
 
-        $testOptionalIndexes = array();
-
         $lastFoundRequiredIndex = -1;
         $lastTemplateRequiredIndex = -1;
-
-        $foundIndexes = array();
-
-        $avaibleOptionalPositionsInTemplate = array();
 
         for($i = 0; $i < count($requiredIndexes); $i++) {
             $index = $requiredIndexes[$i];
@@ -268,11 +281,11 @@ class RouteComparator {
             if ($comparationObject == null) {
                 return null;
             } else {
-                $params = array_merge($params, $comparationObject->optionalParams);
-                if ($comparationObject->isAlias) {
-                    $params[$comparationObject->key] = $comparationObject->value;
+                $params = array_merge($params, $comparationObject->getOptionalParams());
+                if ($comparationObject->getIsAlias()) {
+                    $params[$comparationObject->getKey()] = $comparationObject->getValue();
                 }
-                $lastFoundRequiredIndex = $comparationObject->foundAt;
+                $lastFoundRequiredIndex = $comparationObject->getFoundAt();
                 $lastTemplateRequiredIndex = $index;
             }
         }
@@ -293,9 +306,9 @@ class RouteComparator {
         }
 
         $res = new RouteComparationResult();
-        return $res->handler($handler)
-            ->params($params)
-            ->lengthDelta(count($templateParts) - count($parsedPath));
+        return $res->setHandler($handler)
+            ->setParams($params)
+            ->setLengthDelta(count($templateParts) - count($parsedPath));
     }
 
     private function compareWithTemplateAndReturnParams($parsedPath, $template) {
@@ -314,7 +327,8 @@ class RouteComparator {
         return null;
     }
 
-    public function compare($parsedPath, $templates) {
+    public function compare($parsedPath, $templates) : ?RouteComparationResult {
+
         $foundTemplateResults = array();
         for ($i = 0; $i < count($templates); $i++) {
             $template = $templates[$i];
@@ -324,8 +338,8 @@ class RouteComparator {
             }
         }
 
-        usort($foundTemplateResults, function($a, $b) {
-            return $a->lengthDelta - $b->lengthDelta;
+        usort($foundTemplateResults, function(RouteComparationResult $a, RouteComparationResult $b) {
+            return $a->getLengthDelta() - $b->getLengthDelta();
         });
 
         return count($foundTemplateResults) > 0 ? $foundTemplateResults[0] : null;

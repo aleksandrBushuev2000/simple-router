@@ -2,13 +2,13 @@
 
 namespace SimpleRouter\route_store;
 
-use SimpleRouter\exceptions\NotFoundException;
-
+use SimpleRouter\route_comparator\RouteComparationResult;
 use SimpleRouter\route_comparator\RouteComparator;
+use SimpleRouter\template\Template;
 
 /**
  * @class DefaultRouteStore
- * @version 1.0.0
+ * @version 1.3.0
  * @author Aleksandr Bushuev
  * @description Provides ability to store routes and compare with real request path using RouteComparator
 */
@@ -31,7 +31,7 @@ class DefaultRouteStore implements IRouteStore {
         $this->routes["OPTIONS"] = array();
     }
 
-    public function push($method, $template) {
+    public function push(string $method, Template $template) {
         if (is_null($this->routes[$method])) {
             $this->routes[$method] = array();
         }
@@ -41,21 +41,21 @@ class DefaultRouteStore implements IRouteStore {
 
     /**
      * @param string $path
-     * @throws NotFoundException
-     * @return Object(props : Array, handler : IRequestHandler)
+     * @param string $method
+     * @return RouteComparationResult|null
      */
-    public function match($path, $method) {
+    public function match(string $path, string $method) : ?RouteComparationResult {
         $parsedPath = $this->parser->parse($path);
         $bucket = $this->routes[$method];
         if (isset($bucket)) {
-            $propsAndHandler = $this->comparator->compare($parsedPath, $bucket);
-            if ($propsAndHandler === null) {
-                throw new NotFoundException("Cannot ".$method." ".$path);
+            $comparationResult = $this->comparator->compare($parsedPath, $bucket);
+            if ($comparationResult === null) {
+                return null;
             } else {
-                return $propsAndHandler;
+                return $comparationResult;
             }      
         } else {
-            throw new NotFoundException("Cannot ".$method." ".$path);
+            return null;
         }
     }
 }

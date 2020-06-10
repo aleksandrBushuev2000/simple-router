@@ -13,26 +13,62 @@ use SimpleRouter\template\exceptions\TemplatePartException;
 
 class TemplatePart {
 
-    private $name;
-    private $isAlias;
-    private $isOptional;
-    private $dataType;
-    private $initialValue;
+    private string $name;
+    private bool $isAlias;
+    private bool $isOptional;
+    private string $dataType;
+    private string $initialValue;
 
-    public function __set($key, $value) {
-        if ($key == "name" && !$value) {
-            throw new TemplatePartException("Empty name");
+    /**
+     * @throws TemplatePartException
+     * @param string $name
+     * @return TemplatePart
+    */
+    public function setName(string $name) : TemplatePart {
+        if ($name == "") {
+            throw new TemplatePartException("Invalid name");
         }
-        $this->$key = $value;
-        return $this;
-    }
-    
-    public function __call($method, $arg) {
-        $this->$method = $arg[0];
+        $this->name = $name;
         return $this;
     }
 
-    public function __get($key) {
-        return $this->$key;
+    public function setIsAlias(bool $isAlias) : TemplatePart {
+        $this->isAlias = $isAlias;
+        return $this;
+    }
+
+    public function setIsOptional(bool $isOptional) : TemplatePart {
+        $this->isOptional = $isOptional;
+        return $this;
+    }
+
+    public function setDatatype(string $datatype) : TemplatePart {
+        $this->dataType = $datatype;
+        return $this;
+    }
+
+    public function setInitValue(string $initValue) : TemplatePart {
+        $this->initialValue = $initValue;
+        return $this;
+    }
+
+    public function getName() : string {
+        return $this->name;
+    }
+
+    public function getIsAlias() : bool {
+        return $this->isAlias;
+    }
+
+    public function getIsOptional() : bool {
+        return $this->isOptional;
+    }
+
+    public function getDatatype() : string {
+        return $this->dataType;
+    }
+
+    public function getInitValue() : string {
+        return $this->initialValue;
     }
 }
