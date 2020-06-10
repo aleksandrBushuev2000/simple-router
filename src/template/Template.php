@@ -43,6 +43,10 @@ class Template {
         return $this->optionalLength;
     }
 
+    public function getOptionalIndexes() {
+        return $this->$this->optionalIndexes;
+    }
+
     public function getHandler() : IRequestHandler {
         return $this->handler;
     }

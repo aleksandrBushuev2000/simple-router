@@ -95,13 +95,14 @@ class RouteComparator {
     }
 
 
-    private function noOptionalCompare($parsedPath, $template) {
-        $templateParts = $template->parts;
+    private function noOptionalCompare($parsedPath, Template $template) {
+        $templateParts = $template->getParts();
         $params = array();
-        $handler = $template->handler;
+        $handler = $template->getHandler();
+        $plugins = $template->getPlugins();
 
-        $requiredIndexes = $template->requiredIndexes;
-        $optionalIndexes = $template->optionalIndexes;
+        $requiredIndexes = $template->getRequiredIndexes();
+        $optionalIndexes = $template->getOptionalIndexes();
 
         for ($i = 0; $i < count($requiredIndexes); $i++) {
             $index = $requiredIndexes[$i];
@@ -131,6 +132,7 @@ class RouteComparator {
         $res = new RouteComparationResult();
         return $res->setLengthDelta(count($templateParts) - count($parsedPath))
             ->setParams($params)
+            ->setPlugins($plugins)
             ->setHandler($handler);
     }
 
@@ -303,7 +305,7 @@ class RouteComparator {
             } else {
                 $params = array_merge($params, $comparationObject->getOptionalParams());
                 if ($comparationObject->getIsAlias()) {
-                    $params[$comparationObject->getKey()] = $comparationObject->getValue();
+                   $params[$comparationObject->getKey()] = $comparationObject->getValue();
                 }
                 $lastFoundRequiredIndex = $comparationObject->getFoundAt();
                 $lastTemplateRequiredIndex = $index;
