@@ -44,7 +44,7 @@ class Template {
     }
 
     public function getOptionalIndexes() {
-        return $this->$this->optionalIndexes;
+        return $this->optionalIndexes;
     }
 
     public function getHandler() : IRequestHandler {
