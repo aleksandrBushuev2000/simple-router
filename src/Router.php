@@ -47,12 +47,26 @@ use Throwable;
 */
 class Router {
 
+    private static string $MODE = 'dev';
+
     private ITemplateParser $templateParser;
     private IRouteStore $store;
 
     private static Router $Router;
 
     private AbstractRouteErrorHandler $errorHandler;
+
+    public static function getMode() {
+        return self::$MODE;
+    }
+
+    public static function setProductionMode() {
+        self::$MODE = 'prod';
+    }
+
+    public static function setDevelopmentMode() {
+        self::$MODE = 'dev';
+    }
 
     private function __construct() {
         $this->errorHandler = new RouteExceptionHandler();
