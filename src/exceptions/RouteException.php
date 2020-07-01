@@ -2,6 +2,8 @@
 
 namespace SimpleRouter\exceptions;
 
+use SimpleRouter\Router;
+
 use Exception;
 
 class RouteException extends Exception {

@@ -2,17 +2,19 @@
 
 namespace SimpleRouter\handlers\error_handler;
 
-use SimpleRouter\exceptions\RouteException;
 use SimpleRouter\request\Request;
+use SimpleRouter\Router;
 
 class RouteExceptionHandler extends AbstractRouteErrorHandler {
     public function handle(Request $req) {
-        /**
-         * @var RouteException $e
-        */
         $e = $this->thrownError;
+
         http_response_code($e->getCode());
         $errorString = "An error was thrown: ".$e->getCode(). " ".$e->getMessage();
         print($errorString);
+
+        if (Router::getMode() == 'dev') {
+            print($e->getTraceAsString());
+        }
     }
 }
