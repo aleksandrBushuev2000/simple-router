@@ -20,7 +20,7 @@ use Throwable;
 
 /**
  * @class Router
- * @version 2.0.0
+ * @version 2.1.0
  * @author Aleksandr Bushuev
  * @license MIT
  * @description Main part of this library.

@@ -1,1 +1,0 @@
-vendor/bin/phan.bat --config-file=./phan_config.php --allow-polyfill-parser --output-mode json --output ./phan_check.json
