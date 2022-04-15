@@ -35,6 +35,6 @@ class ResponseHeader {
     public function __toString() : string {
         $name = strtolower($this->name);
         $value = strtolower($this->value);
-        return "$name : $value";
+        return "$name: $value";
     }
 }

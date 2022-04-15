@@ -189,14 +189,16 @@ class Router {
         }
     }
 
-    private function handleException(Request $req, Throwable $e) : ResponseInterface {
+    private function handleException(Request $req, Throwable $e) {
         if ($e instanceof RouteException) {
             $this->errorHandler->setError($e);
         } else {
-            $error = new RouteException("Internal Server Error", 500);
+            $message = self::$MODE == 'dev' ? $e->getMessage() : "Internal Server Error";
+            $error = new RouteException($message, 500);
             $this->errorHandler->setError($error);
         }
-        return $this->errorHandler->handle($req);
+        $res = $this->errorHandler->handle($req);
+        $res->send();
     }
 
     private function executePlugins(array $plugins, Request $req) : bool {
