@@ -6,7 +6,7 @@
   "homepage" : "https://github.com/aleksandrBushuev2000/simple-router",
   "autoload": {
     "psr-4": {
-      "SimpleRouter\\": "./src/"
+      "SimpleRouter\\": "src/"
     }
   },
   "require": {
