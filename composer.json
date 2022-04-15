@@ -1,7 +1,7 @@
 {
   "name": "aleksandr_bushuev/simple_router",
   "description": "PHP Routing Library without any dependency",
-  "version": "2.1.1",
+  "version": "3.0.0",
   "license": "MIT",
   "homepage" : "https://github.com/aleksandrBushuev2000/simple-router",
   "autoload": {

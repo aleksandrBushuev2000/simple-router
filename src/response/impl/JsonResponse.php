@@ -4,6 +4,8 @@
 namespace SimpleRouter\response\impl;
 
 
+use SimpleRouter\response\utils\ResponseHeader;
+
 class JsonResponse extends AbstractResponse {
 
     /**
@@ -13,6 +15,7 @@ class JsonResponse extends AbstractResponse {
 
     public function __construct($payload) {
         $this->payload = $payload;
+        $this->setHeader(ResponseHeader::create("Content-Type", "application/json"));
     }
 
     /**

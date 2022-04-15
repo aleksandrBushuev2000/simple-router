@@ -7,10 +7,13 @@
 ```php
 use SimpleRouter\Router;
 use SimpleRouter\handlers\IRequestHandler;
+use SimpleRouter\response\impl\JsonResponse;
+use SimpleRouter\request\Request;
 
 class ExampleHandler implements IRequestHandler {
-   public function handler(Request $req) {
-        var_dump($req);
+
+   public function handle(Request $req) : JsonResponse {
+       return new JsonResponse(["status" => "OK"]);
    }
 }
  

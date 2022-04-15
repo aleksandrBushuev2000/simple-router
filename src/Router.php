@@ -9,6 +9,7 @@ use SimpleRouter\handlers\error_handler\RouteExceptionHandler;
 use SimpleRouter\handlers\IRequestHandler;
 use SimpleRouter\plugins\IRouterPlugin;
 use SimpleRouter\request\Request;
+use SimpleRouter\response\ResponseInterface;
 use SimpleRouter\route_store\IRouteStore;
 use SimpleRouter\template_parser\DefaultTemplateParser;
 
@@ -30,12 +31,11 @@ use Throwable;
  * After definition of all paths you MUST call handle() method;
  *
  * Note! Router will be ignore default values for non - optional route parts.
- * Note! All handlers MUST implements IRequestHandler interface (@see ./handlers/IRequestHandler.php)
  *
  * @example
  * class ExampleHandler implements IRequestHandler {
- *      public function handler(Request $req) {
-            var_dump($req);
+ *      public function handle(Request $req) : JsonResponse {
+            return new JsonResponse(["status" => "OK"]);
  *      }
  * }
  *
@@ -56,7 +56,7 @@ class Router {
 
     private AbstractRouteErrorHandler $errorHandler;
 
-    public static function getMode() {
+    public static function getMode(): string {
         return self::$MODE;
     }
 
@@ -151,6 +151,8 @@ class Router {
         $this->request("PATCH", $path, $handler, $plugins);
     }
 
+
+
     /**
      * @throws ParseException
      * @param string $method (GET | POST | PUT | DELETE | etc...)
@@ -161,40 +163,6 @@ class Router {
     public function request($method, $path, $handler, array $plugins = []) {
         $template = $this->templateParser->parseTemplate($path, $handler, $plugins);
         $this->store->push($method, $template);
-    }
-
-    private function handleException(Request $req, Throwable $e) {
-        if ($e instanceof RouteException) {
-            $this->errorHandler->setError($e);
-            $this->errorHandler->handle($req);
-        } else {
-            $error = new RouteException("Internal Serve Error", 500);
-            $this->errorHandler->setError($error);
-            $this->errorHandler->handle($req);
-        }
-    }
-
-    private function executePlugins(array $plugins, Request $req) : bool {
-        try {
-            foreach ($plugins as $index => $plugin) {
-                /**
-                 * @var IRouterPlugin $plugin
-                 */
-                $plugin->execute($req);
-            }
-            return true;
-        } catch (Throwable $e) {
-            $this->handleException($req, $e);
-            return false;
-        }
-    }
-
-    private function handleRequest(IRequestHandler $handler, Request $req) {
-        try {
-            $handler->handle($req);
-        } catch (Throwable $e) {
-            $this->handleException($req, $e);
-        }
     }
 
     /**
@@ -220,4 +188,39 @@ class Router {
             $this->handleException(Request::create([]), $e);
         }
     }
+
+    private function handleException(Request $req, Throwable $e) : ResponseInterface {
+        if ($e instanceof RouteException) {
+            $this->errorHandler->setError($e);
+        } else {
+            $error = new RouteException("Internal Server Error", 500);
+            $this->errorHandler->setError($error);
+        }
+        return $this->errorHandler->handle($req);
+    }
+
+    private function executePlugins(array $plugins, Request $req) : bool {
+        try {
+            foreach ($plugins as $index => $plugin) {
+                /**
+                 * @var IRouterPlugin $plugin
+                 */
+                $plugin->execute($req);
+            }
+            return true;
+        } catch (Throwable $e) {
+            $this->handleException($req, $e);
+            return false;
+        }
+    }
+
+    private function handleRequest(IRequestHandler $handler, Request $req) {
+        try {
+            $res = $handler->handle($req);
+        } catch (Throwable $e) {
+            $res = $this->handleException($req, $e);
+        }
+        $res->send();
+    }
+    
 }
