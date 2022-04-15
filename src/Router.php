@@ -222,5 +222,5 @@ class Router {
         }
         $res->send();
     }
-    
+
 }
