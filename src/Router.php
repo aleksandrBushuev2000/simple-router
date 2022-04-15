@@ -60,6 +60,14 @@ class Router {
         return self::$MODE;
     }
 
+    public static function setMode(string $mode) {
+        if ($mode == 'dev') {
+            self::setDevelopmentMode();
+        } else {
+            self::setProductionMode();
+        }
+    }
+
     public static function setProductionMode() {
         self::$MODE = 'prod';
     }

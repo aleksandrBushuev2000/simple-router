@@ -12,7 +12,8 @@ class RouteException extends Exception {
         parent::__construct($message, $code);
     }
 
-    private function validateCode($code) {
+    private function validateCode($code): int
+    {
         if ($code < 400 || $code > 599) {
             return 500;
         }
