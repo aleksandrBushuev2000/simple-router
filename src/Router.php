@@ -219,10 +219,10 @@ class Router {
     private function handleRequest(IRequestHandler $handler, Request $req) {
         try {
             $res = $handler->handle($req);
+            $res->send();
         } catch (Throwable $e) {
-            $res = $this->handleException($req, $e);
+            $this->handleException($req, $e);
         }
-        $res->send();
     }
 
 }
